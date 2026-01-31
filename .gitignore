@@ -1,6 +1,12 @@
 # Prerequisites
 *.d
 
+# Ignore compiled C++ executables
+*.exe
+*.out
+a.exe
+a.out
+
 # Compiled Object files
 *.slo
 *.lo
