@@ -8,7 +8,7 @@ The goal of this repo is to build strong problem-solving skills and maintain a c
 
 ##  Topics Covered(So Far)
 
-- Patterns (10/22)
+- Patterns (20/22)
 
 
 ---
