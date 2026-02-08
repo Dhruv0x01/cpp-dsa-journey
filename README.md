@@ -8,7 +8,8 @@ The goal of this repo is to build strong problem-solving skills and maintain a c
 
 ##  Topics Covered(So Far)
 
-- Patterns (22/22)
+1. Patterns (22/22)
+2. STL (1/?)
 
 
 ---
