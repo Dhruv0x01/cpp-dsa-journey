@@ -111,6 +111,7 @@ void explainVector() {
 
     // ---- 11. Insert Function ---------------------------
     //          .insert(adress, value) or .insert(adress, size, value) -> when you want 5 times 500 value so size is 5 and value is 500 (500, 500, 500, 500, 500)
+    // An insert function in a vector is costly in terms of time
 
     v.insert(v.begin(), 10); // added 10 value at start 
     for(auto it:v){

@@ -211,3 +211,73 @@ v3.empty();    // 0  (false, still has elements)
 | `swap(other)` | exchange contents with `other` |
 | `clear()` | remove all elements |
 | `empty()` | `true` if empty, else `false` |
+
+---
+
+## 3. list
+
+- **Header:** `#include <list>` (already included via `<bits/stdc++.h>`)
+- **What it is:** another dynamic container like `vector`, but it **also gives you cheap front operations**.
+- **Why use it over vector:** in a vector, inserting/adding at the **front** is costly (everything has to shift over). In a list, `push_front()` / `emplace_front()` are **cheap** — that's the main reason to reach for `list`.
+- Internally it's a doubly-linked list, which is why front insertion is cheap but **there is no `[]` index access** (you must walk with iterators).
+
+### Adding at the back (same as vector)
+```cpp
+list<int> ls;
+ls.push_back(2);       // {2}
+ls.emplace_back(4);    // {2, 4}
+```
+
+### Adding at the front (the extra power over vector)
+```cpp
+ls.push_front(1);      // {1, 2, 4}
+ls.emplace_front(10);  // {10, 1, 2, 4}
+```
+
+- `push_front` / `emplace_front` add at the **start**. Vector does **not** have these.
+- As with vector, the `emplace_` versions construct in place (slightly faster; no `{}` needed for pairs).
+
+### Printing a list
+```cpp
+for (auto it : ls)
+    cout << it << " ";     // {10, 1, 2, 4}
+```
+
+- Same range-based loop as vector — `it` holds the value directly.
+- Iterator loops (`begin()`/`end()` with `*it`) work too.
+- **Cannot** use `ls[i]` — no index access on a list. Use iterators.
+
+### Same functions as vector
+These behave exactly like the vector versions:
+
+```cpp
+ls.begin()  ls.end()  ls.rbegin()  ls.rend()   // iterators
+ls.insert(pos, val)                             // insert
+ls.size()                                       // element count
+ls.swap(other)                                  // exchange contents
+ls.clear()   ls.empty()                         // empty out / check
+ls.front()   ls.back()                          // first / last element
+ls.pop_back()                                   // remove last
+ls.pop_front()                                  // remove first  (vector has no pop_front)
+```
+
+---
+
+## Quick Reference — list functions
+
+| Function | What it does |
+|---|---|
+| `push_back(x)` / `emplace_back(x)` | add `x` at the **end** |
+| `push_front(x)` / `emplace_front(x)` | add `x` at the **front** (cheap — list's advantage) |
+| `front()` / `back()` | first / last element directly |
+| `pop_back()` | remove last element |
+| `pop_front()` | remove first element (**vector has no pop_front**) |
+| `begin()` / `end()` | iterator to first / one-past-last |
+| `rbegin()` / `rend()` | reverse: last / one-before-first |
+| `insert(pos, val)` | insert at a position |
+| `size()` | number of elements |
+| `swap(other)` | exchange contents with `other` |
+| `clear()` | remove all elements |
+| `empty()` | `true` if empty, else `false` |
+
+> **No `ls[i]`** — list has no index access. Walk it with iterators or a range-based loop.
