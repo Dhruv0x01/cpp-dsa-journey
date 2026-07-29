@@ -109,6 +109,112 @@ void explainVector() {
 
     // Updated vector v = {5, 6}
 
+    // ---- 11. Insert Function ---------------------------
+    //          .insert(adress, value) or .insert(adress, size, value) -> when you want 5 times 500 value so size is 5 and value is 500 (500, 500, 500, 500, 500)
+
+    v.insert(v.begin(), 10); // added 10 value at start 
+    for(auto it:v){
+      cout << it << " ";
+    }
+    cout << endl; // {10, 5, 6}
+
+    v.insert(v.begin()+1, 4, 72); // we are adding (72, 72, 72, 72) starting from position begin+1
+    for(auto it:v){
+      cout << it << " ";
+    }
+    cout << endl; // {10, 72, 72, 72, 72, 5, 6}
+
+    v.insert(v.end()-2, 53); // we added 53 in 2nd last pos as v.end() is just after last element 6, so it pushes 5, 6 further right
+    for(auto it:v){
+      cout << it << " ";
+    }
+    cout << endl; // {10, 72, 72, 72, 72, 53, 5, 6}
+ 
+
+
+    // ( Not required alot )
+    // Inserting one vector into another
+    // let's say we are inserting vector copy into v (copy -> v)
+    // v.insert(address of v where you want to insert,  address of the range of copy you want to be inserted);
+    // v.insert(v.begin(), copy.begin(), copy.end());
+    vector<int>copy(3, 67); // {67, 67, 67}
+
+    v.insert(v.begin()+3, copy.begin(), copy.end());
+
+    for(auto it:v){
+      cout << it << " ";
+    }
+    cout << endl;  // {10, 72, 72, 67, 67, 67, 72, 72, 53, 5, 6}
+
+
+
+    // ---- 12. Size of a vector -------------
+    //             v.size();
+
+    cout << v.size(); // 11
+    cout << endl;
+
+
+    // ---- 13. Remove last element ---------
+    //            v.pop_back(); -> removes the last element
+
+    v.pop_back(); // {10, 72, 72, 67, 67, 67, 72, 72, 53, 5}
+    v3.pop_back(); // {20, 20, 20, 20}
+
+    for(auto it:v){
+      cout << it << " ";
+    }
+    cout << endl;
+
+    // ---- 14. Swap two vectors -----------
+    // v1 = {100, 100, 100, 100, 100}
+    // v3 = {20, 20, 20, 20}
+    
+    v1.swap(v3);
+
+    cout << "v1: ";
+    for(auto it:v1){
+      cout << it << " ";
+    }
+    cout << endl;
+
+    cout << "v3: ";
+    for (auto it:v3){
+      cout << it << " ";
+    }
+    cout << endl;
+
+    // Now
+    // v1 = {20, 20, 20, 20}
+    // v3 = {100, 100, 100, 100, 100}
+
+
+    // -------- 15. Empty any vector ------------
+    // Erases all the elements in the vector, the vector becomes empty
+    // v.clear();
+
+    v.clear(); 
+
+    cout << "v: ";
+    for(auto it:v){
+      cout << it << " ";
+    }
+    cout << endl;
+    // v = {};
+
+
+    // v.empty()
+    // This returns true or false depending if the vector is empty or not
+    // if it is empty v.empty() returns true else false
+
+    cout << v.empty(); // 1(true)
+    cout << endl;
+
+    cout << v3.empty(); // 0(false)
+    cout << endl;
+
+
+    // These were the functions that are generally required in a vector
 }
 
 int main() {
