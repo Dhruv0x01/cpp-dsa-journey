@@ -301,11 +301,74 @@ void explainDeque(){
 
 }
 
+
+// LIFO (last in first out)
+// like pile of books 
+// you placed first book at bottom, then next above it, and so on
+// so the last book you place, will be at top and come out as first
+void explainStack(){
+    stack<int> st;
+
+    
+
+    // In stack there is generic three functions that we will deal with
+    // push, pop, top 
+    // Time complexity for all these above function in stack is Big O(1)
+
+    // In others (vectors, list, deque) -> we had push_back, emplace_back, push_front, emplace_front(last two not in vectors)
+    // but here it's just push or emplace
+    st.push(1); // {1}
+    st.push(2); // {2, 1}
+    st.push(70); // {70, 2, 1}
+    st.push(55); // {55, 70, 2, 1}
+    st.emplace(21); // {21, 55, 70, 2, 1}
+
+    cout << st.top() << endl; // 21
+
+    // Indexing access is not allowed
+    // st[index] is invalid here
+
+
+    st.pop(); // {55, 70, 2, 1}, top one got removed
+    cout << st.top() << endl; // 55
+
+
+    cout << st.size() << endl; // 4
+
+    cout << st.empty() << endl; // returns 0 or 1 depending if the stack is empty or not, // 0
+
+
+    stack<int> st1, st2;
+
+    for(int x: {1, 2, 3}) st1.push(x);
+
+    for(int x: {6, 7, 8}) st2.push(x);
+
+    
+    // Stack has no iterators, so no range-based for loop can be used to print entire stack
+
+    // st1 = {3, 2, 1}
+    // st2 = {8, 7, 6}
+
+    cout << st1.top() << endl; // 3
+    cout << st2.top() << endl; // 8
+
+    st1.swap(st2);
+
+    // st1 = {8, 7, 6}
+    // st2 = {3, 2, 1}
+
+    cout << st1.top() << endl; // 8
+    cout << st2.top() << endl; // 3
+
+}
+
 int main(){
     //explainPair();
     //explainVector();
     //explainList();
-    explainDeque();
+    //explainDeque();
+    explainStack();
 
     return 0;
 }
