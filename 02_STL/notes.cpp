@@ -315,8 +315,11 @@ void explainStack(){
     // push, pop, top 
     // Time complexity for all these above function in stack is Big O(1)
 
-    // In others (vectors, list, deque) -> we had push_back, emplace_back, push_front, emplace_front(last two not in vectors)
-    // but here it's just push or emplace
+    // In others (vectors, list, deque) -> we had push_back, emplace_back, pop_back, pop_front, push_front, emplace_front(last 3 not in vectors), 
+    // but here it's just push, emplace, pop -> no back/front
+
+    // In stack pop() removes the top element
+
     st.push(1); // {1}
     st.push(2); // {2, 1}
     st.push(70); // {70, 2, 1}
@@ -363,12 +366,42 @@ void explainStack(){
 
 }
 
+// Similar to stack but it follows FIFO
+// first in first out
+// Queue means like a line 
+// So first person comes stand first and then next person and so on
+void explainQueue(){
+    queue<int> q;
+
+    q.push(1); // {1}
+    q.push(2); // {1, 2}
+    q.push(5); // {1, 2, 5}
+    q.emplace(10); // {1, 2, 5, 10}
+
+    cout << q.back() << endl; // 10
+    cout << q.front() << endl; // 1
+
+    q.pop(); // it removes the first element
+    // {2, 5, 10}
+
+    cout << q.front() << endl; // 2
+
+    q.pop(); // removes current first element
+    // {5, 10}
+
+    cout << q.front() << endl; // 5
+
+    // size, swap, empty -> same as stack
+
+}
+
 int main(){
     //explainPair();
     //explainVector();
     //explainList();
     //explainDeque();
-    explainStack();
+    //explainStack();
+    explainQueue();
 
     return 0;
 }
