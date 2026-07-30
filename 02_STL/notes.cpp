@@ -264,13 +264,48 @@ void explainList(){
         cout << it << " ";
     }
     cout << endl; // {10, 1, 2, 4}
+}
+
+// Exactly similar to list and vector
+void explainDeque(){
+    deque<int>dq;
+    dq.push_back(1); // {1}
+    dq.emplace_back(2); // {1, 2}
+    dq.push_front(3); // {3, 1, 2}
+    dq.emplace_front(4); // {4, 3, 1, 2}
+
+    for(auto it:dq){
+        cout << it << " ";
+    }
+    cout << endl;
+
+
+    dq.pop_back(); // {4, 3, 1}
+    for(auto it:dq){
+        cout << it << " ";
+    }
+    cout << endl;
+
+    dq.pop_front(); // {3, 1}
+    for(auto it:dq){
+        cout << it << " ";
+    }
+    cout << endl;
+
+
+    cout << dq.back() << endl; // 1
+    cout << dq.front() << endl; // 3
+
+    // Rest functions same as vector
+    // begin, end, rbegin, rend, clear, insert, size, swap
 
 }
 
 int main(){
-    explainPair();
-    explainVector();
-    explainList();
+    //explainPair();
+    //explainVector();
+    //explainList();
+    explainDeque();
 
     return 0;
 }
