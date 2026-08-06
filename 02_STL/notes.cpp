@@ -558,10 +558,159 @@ void explainMultiSet(){
 
   
   // rest all functions same as set
-  
-
-  
 }
+
+void explainUnorderedSet(){
+  // All operations are similar to set(insert, etc)
+  // They do not store in sorted order
+  // Unique elements
+  // It can have any random order, any element can be stored in any order, it doesn't matter how you fill
+  // In most of the cases, time complexity is O(1)
+  // Worst case -> O(N) happens once in a big moon
+
+  unordered_set<int> st;
+
+  // The lower_bound and upper_bound function do not work
+}
+
+void explainMap(){
+  // It stores everything in respect of { key, value }
+  // key and value can be of any datatype
+  // The key has to be unique, value can be anything
+  // For eg; roll numbers are key, hence unique, names are value -> could repeat with people of same name
+
+  // Note:- Map stores unique key in sorted order
+
+  // first datatype is for key, second is for value
+
+  //map<int, int> mpp; 
+  // int key, int value
+
+  //map<int, pair<int, int>> mpp; 
+  // int key
+  // pair of integers value
+
+  //map<pair<int, int>, int> mpp; 
+  // key is pair of integers
+  // value is integer
+
+  // Ways to store
+  map<int, int> mpp;
+
+  mpp[1] = 2; 
+  // It means for key 1, store value 2
+  // {1:2}
+
+  mpp.emplace(3, 10); // in emplace no need for {}
+  // It means for key 3, store value 10
+  // {1:2, 3:10}
+
+  mpp.insert({4, 13});
+  // For key 4, store value 13
+  // {1:2, 3:10, 4:13}
+
+  // it.first is the key
+  // it.second is the value
+  for(auto it:mpp){
+    cout << it.first << ":" << it.second << endl;
+  }
+  /*
+  1:2
+  3:10
+  4:13
+  */
+
+  map<pair<int, int>, int> mpp1;
+  mpp1[{1, 2}] = 10;
+  // for key (1, 2), store value 10
+  // { (1,2): 10 }
+  
+  mpp1.emplace(make_pair(1, 3), 15); // emplace avoids the outer {}
+  // for key (1, 3), store value 15
+
+  mpp1.emplace(pair<int, int>{1, 4}, 16);
+  // for key (1, 4), store value 16
+
+  mpp1.insert({{2, 1}, 17});
+  // It takes both inner {} and outer {}
+  // for key (2, 1), store value 17
+
+  mpp1.emplace(make_pair(2, 6), 81); // still will store in sorted order only
+  mpp1.emplace(make_pair(2, 3), 21);
+  mpp1.emplace(make_pair(6, 7), 69);
+
+  // { (1,2):10, (1, 3):15, (1,4):16, (2,1):17, (2, 3):21, (2, 6):81, (6, 7): 69  }
+  // it.first is the key which is pair here
+  // it.second is the value
+  for(auto it:mpp1){
+    cout << "(" << it.first.first << "," << it.first.second << "):" << it.second << ", ";
+  }
+  // for (1, 2):10
+  // it.first.first is 1 (key)
+  // it.first.second is 2 (key)
+  // it.second is 10 (value)
+  cout << endl;
+
+
+  // {1:2, 3:10, 4:13}
+  // To access value through key
+  cout << mpp[3] << endl; // gives value at key 3 -> 10
+  cout << mpp[4] << endl; // 13
+
+  // { (1,2):10, (1, 3):15, (1,4):16, (2,1):17, (2, 3):21, (2, 6):81, (6, 7): 69  }
+  cout << mpp1[{1, 4}] << endl; // 16
+  cout << mpp1[{2, 6}] << endl; // 81
+  cout << mpp1[{2, 7}] << endl; // this key doesn't exist/it doesn't have any value stored -> prints null or zero means its empty
+
+
+
+  // {1:2, 3:10, 4:13}
+  // To find the address of a key
+  auto it = mpp.find(4);
+  // *it stores the whole element which is a pair here key:value, you can't cout a pair directly hence we used dereference
+  cout << it->first << endl; // key 4
+  cout << it->second << endl; // value 13 
+  // Or
+  cout << (*it).second << endl; // value 13
+
+  // { (1,2):10, (1, 3):15, (1,4):16, (2,1):17, (2, 3):21, (2, 6):81, (6, 7): 69  }
+  auto it_1 = mpp1.find({6, 7});
+
+  // it_1 -> first; would be entire key which is a pair here hence we need first.first
+  cout << it_1 -> first.first << endl; // 6(key)
+  cout << it_1 -> first.second << endl; // 7(key)
+  cout << it_1 -> second << endl; // 69 (value)
+
+  // {1:2, 3:10, 4:13}
+  auto it_2 = mpp.find(5); // since 5 is not available so this it_2 is just going to point to mpp.end() i.e point to just after the last element
+
+
+  // erase, swap, size, empty, are same as above
+
+  // Syntax
+  auto it_4 = mpp.lower_bound(1);
+  auto it_5 = mpp.upper_bound(2);
+
+}
+
+void explainMultiMap(){
+  // Everything is same as map, only thing different is it can store duplicate keys
+  // Stores everything in sorted order just like map
+
+  // only map[key] cannot be used here
+}
+
+void explainUnorderedMap(){
+  // Can store unique keys
+  // Do not store in sorted order
+
+  // Store in randomized order
+
+  // In almost all cases, time complexity is O(1), worse case O(n) happens really less
+
+  // Whereas in map, time complexity is log(n)
+}
+
 
 
 int main(){
@@ -573,7 +722,11 @@ int main(){
     //explainQueue();
     //explainPQ();
     //explainSet();
-    explainMultiSet();
+    //explainMultiSet();
+    //explainUnorderedSet();
+    //explainMap();
+    //explainMultiMap();
+    //explainUnorderedMap();
 
     return 0;
 }
