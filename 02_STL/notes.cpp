@@ -395,13 +395,185 @@ void explainQueue(){
 
 }
 
+
+void explainPQ(){
+  // Similar to queue, but the guy who has the largest value stays at the top
+  // Largest element stays at the top
+  // Data is not stored in linear fashion, at inside tree is maintained
+
+  // Maximum Heap
+  priority_queue<int>pq;
+
+  pq.push(5); // {5}
+  pq.push(2); // {5, 2}
+  pq.push(1); // {5, 2, 1}
+  pq.push(13); // {13, 5, 2, 1}
+  pq.push(10); // {13, 10, 5, 2, 1}
+
+  cout << pq.top() << endl; // 13
+
+  pq.pop(); // removed the top element (13 got removed)
+
+  cout << pq.top() << endl; // 10
+
+
+  // .size(), .empty(), .swap() functions same as others
+
+
+
+  // If you want to store minimum element at top
+  // Minimum Heap
+  // Syntax -> priority_queue<int, vector<int>, greater<int>> pq;
+
+  // Here min element stays at top
+  // Known as Minimum Heap
+  priority_queue<int, vector<int>, greater<int>> pq1;
+  pq1.push(5); // {5}
+  pq1.push(3); // {3, 5}
+  pq1.push(10); // {3, 5, 10}
+  pq1.push(2); // {2, 3, 5, 10}
+  pq1.push(4); // {2, 3, 4, 5, 10}
+
+  cout << pq1.top() << endl; // 2
+
+
+// Time complexities:- 
+// .push -> log(n)
+// .top -> O(1)
+// .pop -> log(n)
+}
+
+void explainSet(){
+  // Set -> stores everything in sorted order, and only stores unique things(repetition not allowed)
+
+  set<int>st; // Declaration
+
+  // .insert() and .emplace() is used to add elements
+  st.insert(1); // {1}
+  st.insert(2); // {1, 2}
+  st.insert(2); // {1, 2}
+  st.emplace(4); // {1, 2, 4}
+  st.insert(3); // {1, 2, 3, 4}
+
+  // Not a linear container, a tree is maintained inside it
+
+  // begin(), end(), rbegin(), rend(), size(), empty(), swap() are same as before
+
+  // {1, 2, 3, 4}
+  auto it = st.find(3); // this .find(number) is going to return a iterator pointing at that value
+
+  // {1, 2, 3, 4}
+  auto it1 = st.find(6);
+  // if the element is not in the set, it will return an iterator that points to st.end(), i.e. an iterator that points to right after the end
+  // currently it1 got returned an iterator that points to right after 4 i.e. right after the end
+
+  int cnt = st.count(1); // if the element exist in the set, it going to give 1 else 0. Anything else is np as set only takes unique stuff
+
+
+  // In .erase() you can send either element or iterator
+
+  st.erase(2); 
+  // Erases said element and maintains the sorted order, takes logarithmic time
+  // {1, 3, 4}
+
+  auto it2 = st.find(3); // returns an iterator pointing to 3
+  st.erase(it2); // takes iterator and removes 3
+  // {1, 4}
+  // it takes constant time
+
+  // [iterator a, iterator b) this is also possible
+  set<int>st1;
+  st1.insert(1); // {1}
+  st1.insert(2); // {1, 2}
+  st1.insert(10); // {1, 2, 10}
+  st1.insert(21); // {1, 2, 10, 21}
+  st1.insert(4); // {1, 2, 4, 10, 21}
+  st1.insert(13); // {1, 2, 4, 10, 13, 21}
+
+  auto it_a = st1.find(4);
+  auto it_b = st1.find(21);
+
+  // {1, 2, 4, 10, 13, 21}
+  st.erase(it_a, it_b); // [it_a, it_b), first is inclusive and last not inclusive
+  // {1, 2, 21}
+
+
+  // .size(), .empty(), .swap(), .begin() all things same 
+
+  // imp functions in set -> .find, .count, .erase, .insert
+
+
+  // Syntax
+  auto it_c = st.lower_bound(1);
+  auto it_d = st.upper_bound(21);
+  
+  
+  // In set, everything takes Log(n) times complexity
+}
+
+void explainMultiSet(){
+  // It only obeys sorted rule, and no the unique rule
+  // It stores everything in sorted order and repetition of element is allowed
+
+  // Everything is same as set, it just can store multiple same elements too
+  multiset<int>ms;
+
+  ms.insert(1); // {1}
+  ms.insert(2); // {1, 2}
+  ms.insert(1); // {1, 1, 2}
+  ms.insert(1); // {1, 1, 1, 2}
+  ms.insert(3); // {1, 1, 1, 2, 3}
+  ms.insert(2); // {1, 1, 1, 2, 2, 3}
+
+  int cnt = ms.count(1); // gives 3
+  cout << cnt << endl;
+
+  // {1, 1, 1, 2, 2, 3}
+
+  // {1, 1, 1, 3}
+  ms.erase(2); // All 2's are erased
+  int cnt_2 = ms.count(2);
+  cout << cnt_2 << endl; // 0
+
+  
+  // {1, 1, 3}
+  ms.erase(ms.find(1)); // Only a single 1 is erased
+  int cnt_1 = ms.count(1); 
+  cout << cnt_1 << endl; // 2 
+
+  
+  ms.insert(1); ms.insert(1); ms.insert(1); ms.insert(1); ms.insert(1); ms.insert(1);
+  // {1, 1, 1, 1, 1, 1, 1, 1, 3}
+
+  // Let's say we want to erase some instances of 1 
+  auto it = ms.find(1); 
+  auto stop = next(it, 4);
+  ms.erase(it, stop); // erases [it, stop)
+
+  // {1, 1, 1, 1, 3}
+
+  int cnt_11 = ms.count(1);
+  cout << cnt_11 << endl; // 4
+
+
+  
+  // rest all functions same as set
+  
+
+  
+}
+
+
 int main(){
     //explainPair();
     //explainVector();
     //explainList();
     //explainDeque();
     //explainStack();
-    explainQueue();
+    //explainQueue();
+    //explainPQ();
+    //explainSet();
+    explainMultiSet();
 
     return 0;
 }
