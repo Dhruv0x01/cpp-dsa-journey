@@ -711,6 +711,17 @@ void explainUnorderedMap(){
   // Whereas in map, time complexity is log(n)
 }
 
+
+bool comp(pair<int, int> p1, pair<int, int>p2){
+  if(p1.second < p2.second) return true;
+  if(p1.second > p2.second) return false;
+  // If the above two condition did't got trigger that means p1.second == p2.second, hence no need to write that
+
+  if(p1.first > p2.first) return true;
+
+  return false; // cause agar uper ke 3 condition me se kuch trigger nhi hue that means p1.first < p2.first hence returning false on that
+}
+
 void explainExtra(){
 
   // To sort in c++ we can simply use sort(starting iterator, ending iterator)
@@ -738,7 +749,7 @@ void explainExtra(){
   v1.push_back(3);
   v1.push_back(-10);
   // {10, 5, 19, 1, 3, -10}
-  // Let's say we only want to sort from 19 to 1
+  // Let's say we only want to sort from 5 to 3
 
   sort(v1.begin()+1, v1.begin()+5);
   // {10, 1, 3, 5, 19, -10}
@@ -749,8 +760,8 @@ void explainExtra(){
 
   cout << endl;
 
-  // v = {2, 3, 5, 10}
 
+  // v = {2, 3, 5, 10}
   // What if we want to sort in descending order
   sort(v.begin(), v.end(), greater<int>());
 
@@ -762,7 +773,7 @@ void explainExtra(){
 
   // We sorted ascending and descending order, now what if you want to sort it according to your own rules?
 
-  pair<int, int> a[] = {{1, 2}, {2, 1}, {4, 1}};
+  pair<int, int> a[] = {{1, 2}, {2, 1}, {4, 1}, {5, 6}, {7, 9}, {10, 9}, {9, 6}, {11, 2}};
 
   // Sort it according to second element in ascending order
   // If second element is same, then sort according to first element but in descending order
@@ -773,14 +784,61 @@ void explainExtra(){
   // But when second element same, sort acc to first element in descending order
   // {4, 1}, {2, 1}, {1, 2} -> Final
 
+  // We do this by:-
+  // sort(a, a+n, comp)
+  // comp is self written comparator, it is a boolean function, this has to return true or false
+  sort(begin(a), end(a), comp);
+
+  for(auto it:a){
+    cout << it.first << "," << it.second << " ";
+  }
+  cout << endl;
+  // { {4,1}, {2,1}, {11,2}, {1,2}, {9,6}, {5,6}, {10,9}, {7,9} } 
 
 
+  // __builtin_popcount()
+  // Tell us the number of 1 in the binary code of the number
+  // For eg: 7 -> binary is 0111 -> gives us 3 as there is 3 1's
+
+  // __builtin_popcountll()
+  // It is for long long number, again does the same thing, returns the number of 1's in the binary code
 
 
+  // If you want all permutations of a string
+  string s = "123";
 
-  
+  do{
+    cout << s << endl;
+  }while(next_permutation(s.begin(), s.end()));
 
-}
+  // 123, 132, 213, 231, 312, 321
+  // When all permutations are given the next permutation it gives is null
+  // So then null will be put inside while() and then it will break
+  // next_permutation(iterator_start, iterator_end);
+
+  // But if the string was let say s="231", it would only give these permutations
+  // 231, 312, 321
+  // So if you want to print all the permutations, it is imp you give the string in sorted order
+  // so like this:-
+  // string s = "321";
+  // sort(s.begin(), s.end());
+  // s got sorted and now get sent to that do while loop
+  // gets all the permutations
+
+
+  // To find max element in an array
+  // max_element(start_iterator, end_iterator) -> this gives the address of the max element
+  // *max_element(start_iterator, end_iterator) -> this gives the max element
+
+  int arr[4] = { 10, 20, 420, 100};
+
+  int max = *max_element(begin(arr), end(arr));
+
+  cout << max << endl; // 420
+
+
+} 
+
 
 
 int main(){
