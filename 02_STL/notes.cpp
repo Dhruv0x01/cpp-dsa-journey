@@ -711,6 +711,76 @@ void explainUnorderedMap(){
   // Whereas in map, time complexity is log(n)
 }
 
+void explainExtra(){
+
+  // To sort in c++ we can simply use sort(starting iterator, ending iterator)
+  // first inclusive, last exclusive
+  // [start, end)
+  vector<int>v;
+  v.push_back(5); 
+  v.push_back(10);
+  v.emplace_back(3);
+  v.push_back(2);
+  // {5, 10, 3, 2}
+  sort(v.begin(), v.end()); // v.end() points to position just after last element
+  // After sorting it became {2, 3, 5, 10}
+  for(auto it:v){
+    cout << it << " ";
+  }
+  cout << endl;
+
+  // We can also sort some portion only
+  vector<int>v1;
+  v1.push_back(10);
+  v1.push_back(5);
+  v1.push_back(19);
+  v1.push_back(1);
+  v1.push_back(3);
+  v1.push_back(-10);
+  // {10, 5, 19, 1, 3, -10}
+  // Let's say we only want to sort from 19 to 1
+
+  sort(v1.begin()+1, v1.begin()+5);
+  // {10, 1, 3, 5, 19, -10}
+
+  for(auto it:v1){
+    cout << it << " ";
+  }
+
+  cout << endl;
+
+  // v = {2, 3, 5, 10}
+
+  // What if we want to sort in descending order
+  sort(v.begin(), v.end(), greater<int>());
+
+  // v = {10, 5, 3, 2}
+  for(auto it:v){
+    cout << it << " ";
+  }
+  cout << endl;
+
+  // We sorted ascending and descending order, now what if you want to sort it according to your own rules?
+
+  pair<int, int> a[] = {{1, 2}, {2, 1}, {4, 1}};
+
+  // Sort it according to second element in ascending order
+  // If second element is same, then sort according to first element but in descending order
+
+  // Acc to second element ascending order
+  // {2, 1}, {4, 1}, {1, 2}
+
+  // But when second element same, sort acc to first element in descending order
+  // {4, 1}, {2, 1}, {1, 2} -> Final
+
+
+
+
+
+
+  
+
+}
 
 
 int main(){
@@ -727,6 +797,7 @@ int main(){
     //explainMap();
     //explainMultiMap();
     //explainUnorderedMap();
+    explainExtra();
 
     return 0;
 }
