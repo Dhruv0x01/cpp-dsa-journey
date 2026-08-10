@@ -2,16 +2,16 @@
 using namespace std;
 
 // Reverse an array using recursion
-// Way 1: Using two parameter
-// i goes from 0 to size-1
-// r goes from size-1 to 0
-// Moment they are equal (in case of odd) or i becomes bigger than r, array is reversed as we are swapping elements 
+
 void swap(int arr[], int i, int j){
     int temp = arr[i];
     arr[i] = arr[j];
     arr[j] = temp;
 }
-
+// Way 1: Using two parameter
+// i goes from 0 to size-1
+// r goes from size-1 to 0
+// Moment they are equal (in case of odd) or i becomes bigger than r, array is reversed as we are swapping elements 
 // Here i and r both changes
 void reverseArray(int arr[], int r, int i=0){
     if(i >= r){ // More than equal so it works for even too
@@ -29,9 +29,7 @@ void reverseArray(int arr[], int r, int i=0){
 // Size stays constant
 void reverseArrayA(int arr[], int size, int i=0){
     if(i >= size/2) return;
-
     swap(arr, i, size-i-1);
-
     reverseArrayA(arr, size, i+1);
 }
 

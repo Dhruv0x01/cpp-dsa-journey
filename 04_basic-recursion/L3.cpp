@@ -15,18 +15,14 @@ void sumNumP(int i, int sum=0){
     sumNumP(i-1, sum+i);
 }
 
-
-
 // Way 2: Functional way(where function itself returns the answer)
 // You want the function to return the answer 
 // It will accept N and return sum upto N
-
 int sumNumF(int i){
     if(i==0) return 0;
 
     return i+sumNumF(i-1);
 }
-
 
 // Factorial of n
 // Way 1: Parameterized
