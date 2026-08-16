@@ -181,6 +181,44 @@ typical DSA inputs. Only fall back to `map` if `unordered_map` is somehow hittin
 (rare — usually only with adversarial/crafted inputs targeting a weak hash) or if you
 specifically need sorted key order, which `unordered_map` can't give you.
 
+### How hashing works internally — hash functions
+
+An `unordered_map` doesn't keep keys in sorted order the way `map` does — instead, it runs
+each key through a **hash function** to decide which "bucket" (slot) it belongs in, then reads
+and writes by jumping straight to that bucket. There are a few classic ways to compute that:
+
+- **Division Method (the one actually worth understanding):** `bucket = key % table_size`.
+  Take the key, mod it by however many buckets exist, land in that bucket. Simple, fast, and
+  captures the core idea behind hashing in practice.
+- **Folding Method:** split the key into chunks, add the chunks together, use that sum
+  (usually mod the table size) as the bucket index. Rarely something you need to implement
+  yourself at DSA level.
+- **Mid-Square Method:** square the key, then take the middle digits of the result as the
+  index. Also rarely relevant day-to-day — worth knowing it exists, not worth memorizing.
+
+For interviews and DSA work, the Division Method is the one to actually internalize — the
+other two exist mostly for completeness/awareness.
+
+### Collisions — why `unordered_map`'s worst case happens
+
+A **collision** is when two *different* keys hash to the *same* bucket — purely a side effect
+of how the hash function happens to map inputs, not something you control directly by how you
+write your code. When that happens, both keys have to live in the same bucket (typically as a
+small list), so looking either of them up means scanning that whole bucket instead of jumping
+straight to one slot. If enough keys collide into the same bucket, that bucket effectively
+degrades into a linear list, and any operation touching it costs O(n) instead of O(1) — this
+is exactly where `unordered_map`'s O(n) worst case (from the table above) comes from.
+
+### `unordered_map` vs `map` — key/value type restriction
+
+One more practical difference, beyond ordering and complexity: `unordered_map`'s keys and
+values are limited to types that have a hash function available for them — built-in types
+like `int`, `double`, `char`, and `string` work out of the box (custom types need you to write
+your own hash function, which is extra work). `map` only needs its keys to support `<`
+comparison, so it can hold richer key/value types out of the box — like `pair<int,int>` as a
+key — with nothing extra required. So `map` also earns its keep when the data itself is more
+structured, not just when you need sorted order.
+
 ### Gotcha — the "phantom key" side effect
 
 `mpp[target]` **creates** `target` with value 0 if it doesn't exist — even when you're just
@@ -322,3 +360,92 @@ swap map for array (fixed alphabet → array beats tree), then widen the array t
 ASCII range to skip the `-'a'` normalization step entirely — each step trims either
 unnecessary work or unnecessary structure without changing the underlying O(n) time
 complexity, but shrinking the real-world constant factor each time.
+
+## LeetCode 448 — Find All Numbers Disappeared in an Array
+
+**Problem:** given an array of size `n` with values in `[1, n]`, some numbers appear once,
+twice, or not at all — return every number in `[1, n]` that never appears.
+
+**Approaches tried, worst → best:**
+
+1. **Hardcoded `int hash[100000]`:** correct (this problem's constraint guarantees
+   `n ≤ 10^5`), but the size is tied to the *problem's stated bounds*, not to the actual input
+   — a magic number you'd have to remember to update if the constraint ever changed.
+2. **`vector<int> hash(n, 0)`, sized dynamically:** same array-marking idea (mark `hash[it-1]`
+   for every number seen, then collect indices left at `0`), but sized from `nums.size()`
+   itself — self-contained, no magic number, and legal because `vector`'s constructor takes a
+   runtime size (unlike a raw array's compile-time-only size).
+3. **Best (for space) — in-place negation marking, O(1) extra space:** skip the separate hash
+   array entirely. For each number seen, go to its home index (`abs(nums[i])-1`) and negate
+   whatever's there if it's still positive — that's the "seen" flag, stored for free in the
+   sign bit. At the end, any index still holding a *positive* value means that number never
+   appeared — push `index + 1` into the answer.
+
+**Key lesson:** the sign of a number is "free" extra storage you can repurpose as a 1-bit
+flag, letting you eliminate an entire auxiliary array when the problem guarantees values fall
+in a range you can map onto the input array's own indices.
+
+## LeetCode 442 — Find All Duplicates in an Array
+
+**Problem:** values guaranteed in `[1, n]`, each number appears once or twice — return every
+number that appears **twice**.
+
+**Approaches tried, worst → best:**
+
+1. **`vector<int> hash(n, 0)` frequency count, then collect where `hash[i] == 2`:** correct,
+   O(n) time, O(n) extra space — a direct reuse of the Part 1 array-hashing pattern.
+2. **In-place negation marking, first attempt (buggy):** tried the same negation trick as 448
+   for O(1) extra space, but pushed `ans.push_back(i+1)` — the *loop position* — instead of
+   the actual duplicate value. This bug happened to still produce a correct-*looking* result
+   on a coincidental test case (`[2,2]`, where the position and the value collided by
+   accident), which masked it until tried against a different input.
+3. **Best — in-place negation marking, fixed:** same idea, but push `abs(nums[i])` (the value
+   currently being read) instead of `i+1` the moment a home slot is found already negative.
+   O(n) time, O(1) extra space (excluding the output), single pass — detects and collects
+   duplicates in one go.
+
+**Key lesson:** in a single-pass detect-and-collect loop, the value you push into the answer
+must come from the data you're currently reading (`nums[i]` / `abs(nums[i])`) — the loop index
+only reliably maps to "the number" in a *separate*, later pass over the whole array (like
+448's second loop), not while you're still actively reading through values mid-pass.
+
+## LeetCode 645 — Set Mismatch
+
+**Problem:** an array meant to hold `1..n` has one number duplicated (in place of some other
+number) and, as a result, one number missing. Return `[duplicate, missing]`.
+
+**Approaches tried:**
+
+1. **In-place negation marking (448 + 442 fused into one array, one pass):** for each number
+   seen, negate its home slot if still positive; if it's already negative, that number is the
+   duplicate — push `abs(nums[i])` (not `i+1` — the same bug from 442 resurfaced here at
+   first, caught the same way, by testing against an input where index and value didn't
+   coincidentally match). In a second pass, whichever slot is still positive tells you the
+   missing number, via `index + 1`.
+
+**Key lesson:** this problem is really "find the duplicate" (442) and "find the missing"
+(448) happening on the *same* array in the *same* pass — recognizing that let the same
+negation trick, and the same index-vs-value fix, carry over directly instead of needing new
+logic from scratch.
+
+## LeetCode 41 — First Missing Positive
+
+**Problem:** return the smallest positive integer that does **not** appear in the array,
+ideally in O(n) time and O(1) extra space.
+
+**First attempt — `vector<int> hash(nums.size(), 0)` array-hashing. Bugs identified so far
+(not yet fully solved):**
+
+1. **Inverted condition:** `if(hash[i]) return i;` returns `i` when the number *was* found —
+   backwards from what's needed, since the goal is the first number that's *missing*
+   (`hash[i] == 0`, not truthy).
+2. **Off-by-one on array size:** `hash` is sized `nums.size()`, but a positive value in `nums`
+   can equal `nums.size()` itself — one past the last valid index for a vector of that size —
+   an out-of-bounds write waiting to happen.
+3. **Missing fallback return:** if every number `1..n` is already present, the loop never
+   finds a gap and the function falls through without returning anything — needs an explicit
+   `return n+1;` after the loop to cover that case.
+
+**Status:** bugs identified via hints, fix not yet confirmed working. Good one to revisit once
+the array-hashing version is airtight, then optionally attempt the harder O(1)-space cyclic
+sort version as a stretch follow-up.
