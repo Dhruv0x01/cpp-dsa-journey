@@ -398,3 +398,232 @@ int main() {
 > `#include <bits/stdc++.h>` is a GCC-only header — fine for competitive programming and
 > practice, but in real projects include what you actually use (`<vector>`, `<iostream>`,
 > `<utility>` for `std::swap`).
+
+---
+
+# Insertion Sort
+
+**Core idea:** take each element in turn and **insert** it into its correct position among the
+elements already handled. Think of sorting a hand of playing cards: the cards in your left hand
+are always sorted, you pick up the next card, and you slide it leftward until it sits in the
+right place.
+
+The array is mentally split in two:
+
+```
+[ sorted part | unsorted part ]
+               ^
+               the element being placed right now
+```
+
+Each pass grows the sorted part by exactly one element.
+
+**Contrast with the other two:**
+
+- Selection Sort also grows its sorted region from the left, but it *searches the unsorted part*
+  for the right value to put next. Insertion Sort does the opposite — it takes whatever value
+  comes next and *searches the sorted part* for where that value belongs.
+- Bubble Sort also works purely by adjacent swaps, but it walks the *whole* remaining range
+  every pass. Insertion Sort walks left only as far as it needs to, then stops. That single
+  difference is what makes it genuinely fast on nearly-sorted data rather than just
+  early-exiting once at the end.
+
+## How it works
+
+**Pass 0 (implicit):** index `0` alone is trivially a sorted array of size 1. Nothing to do —
+which is why the outer loop starts at `i = 1`, not `i = 0`.
+
+**Pass `i`:** treat `arr[0 … i-1]` as sorted and take `arr[i]` as the element to place. Compare
+it with its left neighbour. If it's smaller, swap and repeat; keep walking left until either
+
+- it's no longer smaller than the element on its left (correct spot found → `break`), or
+- it has reached index `0` (it was the smallest so far).
+
+**After pass `i`:** `arr[0 … i]` is sorted. Repeat until `i = n-1`.
+
+Important subtlety: unlike Selection Sort, an element already in the "sorted" region is **not
+in its final position** — later insertions will keep shifting it rightward. The region is
+sorted *relative to itself*, not finalised.
+
+## Why the early `break` is the whole point
+
+Once `arr[j] >= arr[j-1]`, you can stop the inner loop immediately. The left part is already
+sorted, so everything further left is also `<= arr[j-1] <= arr[j]` — there is nothing left that
+could need to move. No other simple sort gets to stop this early inside a pass.
+
+Consequence: on an already-sorted array every inner loop breaks after a single comparison, so
+the whole thing costs `n-1` comparisons — **O(n) best case**, with no extra flag or bookkeeping
+needed. Bubble Sort needs an explicit `swapped` flag to achieve the same thing; Selection Sort
+can't achieve it at all.
+
+## Dry run — `[13, 46, 24, 52, 20, 9]`
+
+Sorted (relatively-ordered) region shown before `//`.
+
+| Pass `i` | Element being inserted | Comparisons walking left | Array after pass |
+|--|--|--|--|
+| Start | — | — | `13 // 46 24 52 20 9` |
+| 1 | `46` | `46 > 13` → stop immediately | `13 46 // 24 52 20 9` |
+| 2 | `24` | `24 < 46` swap; `24 > 13` stop | `13 24 46 // 52 20 9` |
+| 3 | `52` | `52 > 46` → stop immediately | `13 24 46 52 // 20 9` |
+| 4 | `20` | `<52` swap, `<46` swap, `<24` swap, `>13` stop | `13 20 24 46 52 // 9` |
+| 5 | `9` | `<52`, `<46`, `<24`, `<20`, `<13` — all swap, reaches index 0 | `9 13 20 24 46 52` — **sorted** |
+
+Notice passes 1 and 3 cost one comparison each because the incoming element was already bigger
+than everything before it. Bubble Sort has no equivalent shortcut *within* a pass.
+
+**Cost of this run:** 13 comparisons and 9 swaps, versus Bubble Sort's fixed 15 comparisons on
+the same input. Worst case for both is `n(n-1)/2 = 15`.
+
+## Complexity
+
+| | Time | Why |
+|--|--|--|
+| Best case | O(n) | already sorted → each inner loop breaks after 1 comparison → `n-1` comparisons, 0 swaps. No flag required, it falls out of the `break` |
+| Average case | O(n²) | each element travels about half the sorted region on average → ~n²/4 comparisons |
+| Worst case | O(n²) | reverse sorted → element `i` walks all the way to index 0 → `1+2+…+(n-1) = n(n-1)/2` comparisons *and* the same number of swaps |
+| Space | O(1) | in-place; one loop counter each, no auxiliary array |
+
+**Stable:** yes. The condition is strict `<`, so an element never swaps past an equal element.
+
+**Adaptive:** yes, and more meaningfully than Bubble Sort. If every element is at most `k`
+positions from its correct place, insertion sort runs in O(n·k) — it does real work
+proportional to how out of order the data actually is. This is why it's the base case inside
+real-world hybrid sorts: `std::sort` (introsort) switches to insertion sort for small
+subarrays, and Timsort (Python, Java) builds its initial runs with it.
+
+## Number of swaps
+
+Worst case `n(n-1)/2` — same as Bubble Sort, since both move elements only by adjacent swaps.
+But the *average* is far better because of the early break, and the swap-based version can be
+improved further (see below).
+
+### Optimisation: shift instead of swap
+
+Every `swap` is three assignments (`tmp = a; a = b; b = tmp`). Since the element being inserted
+is the same value in every swap of a pass, you can hold it in a temporary once, shift the
+larger elements one slot right, and drop it in at the end — roughly **one third the writes**:
+
+```cpp
+void insertionSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 1; i < n; i++) {
+        int key = arr[i];              // hold the element being inserted
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];       // shift right, no swap
+            j--;
+        }
+        arr[j + 1] = key;              // drop it into the gap
+    }
+}
+```
+
+The `j >= 0` check must come **first** in the `&&` — short-circuit evaluation is what stops
+`arr[j]` being read at `j = -1`. Same algorithm, same complexity, fewer memory writes.
+
+## Pseudocode outline
+
+For each `i` from `1` to `n - 1`:
+- For `j` from `i` down to `1`:
+  - If `arr[j] < arr[j-1]`, swap them.
+  - Otherwise break — `arr[j]` is already in its correct place.
+
+## C++ implementation
+
+```cpp
+void insertionSort(int arr[], int n) {
+    // i marks the element being inserted into the sorted left part.
+    // Starts at 1 because arr[0] alone is already "sorted".
+    for (int i = 1; i <= n - 1; i++) {
+
+        // Walk arr[i] leftwards one swap at a time until it lands
+        // in its correct position inside the sorted part.
+        for (int j = i; j > 0; j--) {
+            if (arr[j] < arr[j - 1]) {
+                swap(arr[j], arr[j - 1]);   // still too far right, keep going
+            } else {
+                break;                      // correct spot found — left side is sorted,
+            }                               // so nothing further left can need moving
+        }
+    }
+}
+```
+
+Vector version:
+
+```cpp
+void insertionSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 1; i < n; i++) {
+        for (int j = i; j > 0 && arr[j] < arr[j - 1]; j--) {
+            swap(arr[j], arr[j - 1]);
+        }
+    }
+}
+```
+
+Both are safe for `n = 0` and `n = 1` — the outer loop simply never runs. (No `n - 2`
+underflow risk here, unlike Bubble Sort, since the bound is `i < n`.)
+
+## Driver program
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+void insertionSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 1; i < n; i++) {
+        for (int j = i; j > 0 && arr[j] < arr[j - 1]; j--) {
+            swap(arr[j], arr[j - 1]);
+        }
+    }
+}
+
+int main() {
+    int n;
+    cout << "Enter n: ";
+    cin >> n;
+
+    vector<int> arr(n);
+    cout << "Enter array elements: " << endl;
+    for (int i = 0; i < n; i++) cin >> arr[i];
+
+    insertionSort(arr);
+
+    cout << "After insertion sort: " << endl;
+    for (int x : arr) cout << x << " ";
+    return 0;
+}
+```
+
+---
+
+# Side-by-side summary
+
+| | Selection Sort | Bubble Sort | Insertion Sort |
+|--|--|--|--|
+| Sorted region grows from | left | right | left |
+| Placed elements are final? | yes | yes | **no** — they still shift |
+| How an element moves | one long-distance swap | many adjacent swaps | many adjacent swaps/shifts |
+| Best case | O(n²) | O(n) *(needs `swapped` flag)* | **O(n)** *(falls out of the `break`)* |
+| Average | O(n²) | O(n²) | O(n²) |
+| Worst | O(n²) | O(n²) | O(n²) |
+| Space | O(1) | O(1) | O(1) |
+| Swaps (worst) | **n-1** | n(n-1)/2 | n(n-1)/2 |
+| Stable | no (standard version) | yes | yes |
+| Adaptive | no | only detects "fully sorted" | **yes** — O(n·k) for k-sorted data |
+
+**Pick by constraint:**
+
+- **Writes are expensive** (large structs, flash memory, network) → Selection Sort, at most
+  `n-1` swaps.
+- **Data is nearly sorted, or arrives one element at a time** → Insertion Sort. It's also the
+  fastest of the three on small arrays in practice, which is why real library sorts fall back
+  to it below ~16–32 elements.
+- **Bubble Sort** → mostly a teaching algorithm. Insertion Sort beats it on essentially every
+  metric while being just as simple.
+
+All three are O(n²) and none should be used on large inputs — reach for `std::sort` (O(n log n))
+or `std::stable_sort` when stability is needed.
