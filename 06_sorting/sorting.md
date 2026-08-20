@@ -627,3 +627,402 @@ int main() {
 
 All three are O(n²) and none should be used on large inputs — reach for `std::sort` (O(n log n))
 or `std::stable_sort` when stability is needed.
+
+---
+
+# Merge Sort
+
+**Core idea:** sorting a big array is hard; **merging two already-sorted arrays is easy**. So
+split the array in half, sort each half (recursively, by the same logic), then merge the two
+sorted halves back together. Keep splitting until each piece has one element — a one-element
+array is sorted by definition, and that's the base case that stops the recursion.
+
+This is the first **divide and conquer** algorithm in the course, and the first one that breaks
+the O(n²) barrier. The three previous sorts all worked by repeatedly scanning and swapping
+within one flat array. Merge sort doesn't scan for anything — it *restructures the problem*
+into smaller copies of itself.
+
+**Contrast with the previous three:**
+
+- Selection / Bubble / Insertion all move elements by comparing them against *other individual
+  elements*. Merge sort compares two *sorted blocks* against each other, which is what buys the
+  speed: one pass over `n` elements resolves the order of two whole halves at once.
+- All three earlier sorts are **in-place** (O(1) extra space). Merge sort is **not** — it needs
+  an O(n) temporary buffer. That's the price of the speedup.
+- All three earlier sorts do their work *going forward* through the array. Merge sort does all
+  its actual work **on the way back up** out of the recursion.
+
+## The two halves of the algorithm
+
+Keep these mentally separate — this is where most confusion comes from:
+
+| function | what it does | does it sort anything? |
+|--|--|--|
+| `mergeSort()` | splits the range in two, recurses on each half | **no** — it only divides |
+| `merge()` | combines two adjacent sorted ranges into one sorted range | **yes** — all the real work |
+
+`mergeSort` is pure bookkeeping. Every element that ends up in the right place was put there by
+`merge`.
+
+## How it works
+
+**Divide:** given range `arr[low … high]`, compute `mid` and split into `arr[low … mid]` and
+`arr[mid+1 … high]`. Note both ends are **inclusive** throughout, and `mid` belongs to the
+*left* half — which is why the right half starts at `mid + 1`.
+
+**Conquer:** recursively `mergeSort` each half. Trust that they come back sorted. (This is the
+leap of faith recursion always asks for — don't try to trace all the way down in your head,
+just assume the recursive call honours its contract.)
+
+**Combine:** `merge` the two sorted halves into one sorted range.
+
+**Base case:** `if (low >= high) return;` — a range of size 0 or 1 is already sorted, so there's
+nothing to split and nothing to merge. Without this the recursion never terminates.
+
+## Recursion tree — `[13, 46, 24, 52, 20, 9]`
+
+```
+                     [13,46,24,52,20,9]                  (0,5)  mid=2
+                    /                  \
+           [13,46,24]                  [52,20,9]         (0,2) (3,5)
+           /        \                  /       \
+      [13,46]      [24]           [52,20]      [9]       (0,1) (2,2) (3,4) (5,5)
+      /     \                     /     \
+   [13]     [46]               [52]     [20]             base cases: size 1
+```
+
+Going **down** = splitting (mergeSort). Going **back up** = merging (merge).
+The merges happen in this order:
+
+| # | merge call | left half | right half | result written back |
+|--|--|--|--|--|
+| 1 | `merge(0,0,1)` | `[13]` | `[46]` | `[13,46]` |
+| 2 | `merge(0,1,2)` | `[13,46]` | `[24]` | `[13,24,46]` |
+| 3 | `merge(3,3,4)` | `[52]` | `[20]` | `[20,52]` |
+| 4 | `merge(3,4,5)` | `[20,52]` | `[9]` | `[9,20,52]` |
+| 5 | `merge(0,2,5)` | `[13,24,46]` | `[9,20,52]` | `[9,13,20,24,46,52]` |
+
+Note the whole left subtree finishes before the right subtree starts — that's just how the two
+recursive calls are sequenced. Also: **5 merge calls for 6 elements**. In general a merge sort
+on `n` elements performs exactly `n - 1` merges (one per internal node of the tree).
+
+## The merge step in detail
+
+This is the part worth understanding cold, because it reappears on its own in problems.
+
+**The contract:** `merge(arr, low, mid, high)` assumes `arr[low…mid]` is sorted **and**
+`arr[mid+1…high]` is sorted. It has no idea how they got that way and doesn't care.
+
+**The trick:** because both halves are sorted, the smallest unused element in the whole range is
+always sitting at the *front* of one half or the other. You never have to search. So: keep a
+pointer at the front of each half, compare the two, take the smaller, advance that pointer.
+Repeat.
+
+**Three phases:**
+
+1. **Two-pointer walk** — while *both* halves still have elements, take the smaller front
+   element into `temp`.
+2. **Drain the leftovers** — the loop above exits the moment one half runs dry. The other half
+   still has elements, and they're already sorted *and* all larger than everything in `temp`,
+   so just append them in order. Exactly one of the two drain loops actually runs.
+3. **Copy back** — `temp` is a separate 0-indexed buffer; copy it into `arr[low…high]`.
+
+### Walking the final merge — `merge(0, 2, 5)`
+
+Left half `[13,24,46]` (indices 0–2), right half `[9,20,52]` (indices 3–5).
+
+| step | `arr[left]` | `arr[right]` | comparison | take | `temp` after |
+|--|--|--|--|--|--|
+| 1 | `13` | `9` | `13 <= 9`? no | right `9` | `[9]` |
+| 2 | `13` | `20` | `13 <= 20`? yes | left `13` | `[9,13]` |
+| 3 | `24` | `20` | `24 <= 20`? no | right `20` | `[9,13,20]` |
+| 4 | `24` | `52` | `24 <= 52`? yes | left `24` | `[9,13,20,24]` |
+| 5 | `46` | `52` | `46 <= 52`? yes | left `46` | `[9,13,20,24,46]` |
+| — | *exhausted* | `52` | left half empty → exit loop | — | — |
+| drain | — | `52` | append remaining right half | `52` | `[9,13,20,24,46,52]` |
+
+Then copy `temp` back into `arr[0…5]`. **Sorted.**
+
+Five comparisons for six elements — a merge of a total of `k` elements costs at most `k - 1`
+comparisons and exactly `k` writes.
+
+### `<=` vs `<` — this is what makes merge sort stable
+
+In `if (arr[left] <= arr[right])`, the `<=` means **on a tie, take from the left half**. Since
+the left half holds elements that came earlier in the original array, equal elements keep their
+original relative order. Change it to `<` and merge sort silently stops being stable. This is a
+standard interview question.
+
+### The `i - low` offset — the classic bug
+
+`temp` is its own vector starting at index `0`, but you're writing back into `arr[low…high]`.
+So the mapping is:
+
+```
+arr[low]     <- temp[0]
+arr[low + 1] <- temp[1]
+arr[i]       <- temp[i - low]
+```
+
+Forgetting the `- low` is *the* merge sort bug, and it's nasty because the top-level call has
+`low == 0`, where the wrong version works fine. It only breaks in the recursive sub-calls, so
+tiny test arrays may still pass.
+
+## Why `mid + 1` and not `mid`
+
+`mid` already belongs to the left half. Calling `mergeSort(arr, mid, high)` would put `mid` in
+*both* halves — the range never shrinks, and you get infinite recursion / stack overflow. The
+two halves must **partition** the range: every index in exactly one of them.
+
+## Why `low + (high - low) / 2` instead of `(low + high) / 2`
+
+Mathematically identical, but `low + high` can exceed `INT_MAX` and overflow when the array is
+large. Harmless for practice arrays, but build the habit now — **this exact bug returns in
+Binary Search (Step 4)**, and it's famous: it sat undetected in Java's standard library
+`binarySearch` for nine years.
+
+## Complexity
+
+| | Time | Why |
+|--|--|--|
+| Best case | O(n log n) | no shortcuts exist — it splits and merges the same way regardless of input |
+| Average case | O(n log n) | same |
+| Worst case | O(n log n) | same — **guaranteed**, which quick sort can't promise |
+| Space | **O(n)** | the `temp` buffer, plus O(log n) recursion stack |
+
+### Deriving the O(n log n)
+
+**Height of the tree = log₂n.** Each level halves the range, so from `n` you get
+`n → n/2 → n/4 → … → 1`. The number of halvings needed is `log₂n`. For `n = 8`: 8 → 4 → 2 → 1,
+that's 3 levels of splitting, and `log₂8 = 3`. ✓
+
+**Work per level = O(n).** At any given level of the tree, the ranges are disjoint and together
+cover all `n` elements. Merging them touches each element exactly once. So every level costs
+O(n) total, no matter how many separate merges that level is split across:
+
+| level | ranges | elements merged at this level |
+|--|--|--|
+| bottom | 8 ranges of 1 | 8 |
+| next | 4 merges of 2 | 8 |
+| next | 2 merges of 4 | 8 |
+| top | 1 merge of 8 | 8 |
+
+**Total = O(n) per level × O(log n) levels = O(n log n).**
+
+That's the whole derivation, and it's the template for analysing *every* divide-and-conquer
+algorithm you'll meet later.
+
+### Space — the one real weakness
+
+O(n) auxiliary space for `temp`. At the top-level merge, `temp` holds all `n` elements at once.
+Compare: Selection, Bubble and Insertion are all O(1). Quick sort (next up) is also O(1)
+auxiliary — that's its main argument over merge sort, alongside better cache behaviour.
+
+Plus **O(log n) stack space** for the recursion depth. Rarely a problem, but it's a real cost
+and worth mentioning if asked "is merge sort in-place?" — the honest answer is *no, on both
+counts*.
+
+> **Common optimisation:** declaring `vector<int> temp` inside `merge` means allocating a fresh
+> vector on every one of the `n-1` merge calls. Allocating one buffer of size `n` up front and
+> passing it by reference is measurably faster. Worth knowing exists; not worth doing while
+> you're still learning the shape.
+
+## Stability and adaptivity
+
+**Stable:** yes — from the `<=`, as above. This is why `std::stable_sort` is a merge sort
+variant while `std::sort` (introsort: quicksort + heapsort + insertion sort) is not stable.
+
+**Adaptive:** no, not by default. An already-sorted array costs exactly the same as a random
+one. There is a cheap fix though:
+
+```cpp
+if (arr[mid] <= arr[mid + 1]) return;   // left half entirely <= right half
+merge(arr, low, mid, high);             // ...so they're already in order
+```
+
+If the largest element of the left half is already `<=` the smallest of the right half, the
+merge is a no-op. On sorted input this makes the whole algorithm O(n). This one-line idea is
+the seed of **Timsort** (Python's and Java's real sort), which detects already-sorted "runs" in
+the input and merges those instead of blindly splitting to size 1.
+
+## Number of swaps
+
+**Zero.** Merge sort never swaps — it *copies*. Total writes are `O(n log n)` (each level
+writes every element once into `temp` and once back). This makes it the odd one out against the
+previous three, all of which move data purely by swapping.
+
+## Pseudocode outline
+
+**mergeSort(arr, low, high):**
+- If `low >= high`, return — range of size ≤ 1 is already sorted.
+- `mid = low + (high - low) / 2`
+- `mergeSort(arr, low, mid)` — sort left half
+- `mergeSort(arr, mid + 1, high)` — sort right half
+- `merge(arr, low, mid, high)` — combine
+
+**merge(arr, low, mid, high):**
+- `left = low`, `right = mid + 1`, empty buffer `temp`
+- While `left <= mid` **and** `right <= high`: push the smaller of `arr[left]` / `arr[right]`
+  into `temp` (ties → left), advance that pointer.
+- While `left <= mid`: push `arr[left++]`.
+- While `right <= high`: push `arr[right++]`.
+- For `i` from `low` to `high`: `arr[i] = temp[i - low]`.
+
+## C++ implementation
+
+```cpp
+// PRECONDITION: arr[low..mid] is sorted AND arr[mid+1..high] is sorted.
+void merge(vector<int>& arr, int low, int mid, int high) {
+    vector<int> temp;
+    temp.reserve(high - low + 1);      // optional: avoids vector regrowth
+
+    int left  = low;                   // pointer into the LEFT half
+    int right = mid + 1;               // pointer into the RIGHT half
+
+    // Phase 1: both halves still have elements — take the smaller front one.
+    while (left <= mid && right <= high) {
+        if (arr[left] <= arr[right]) { // <= keeps merge sort STABLE
+            temp.push_back(arr[left++]);
+        } else {
+            temp.push_back(arr[right++]);
+        }
+    }
+
+    // Phase 2: one half ran out. Drain the other — it's already sorted and
+    // everything in it is larger than everything in temp.
+    while (left  <= mid)  temp.push_back(arr[left++]);
+    while (right <= high) temp.push_back(arr[right++]);
+
+    // Phase 3: copy back. temp is 0-indexed, arr starts at low → offset by low.
+    for (int i = low; i <= high; i++) {
+        arr[i] = temp[i - low];
+    }
+}
+
+// Sorts arr[low..high]. Both ends INCLUSIVE.
+void mergeSort(vector<int>& arr, int low, int high) {
+    if (low >= high) return;                 // base case: size 0 or 1
+
+    int mid = low + (high - low) / 2;        // overflow-safe midpoint
+
+    mergeSort(arr, low, mid);                // sort left half
+    mergeSort(arr, mid + 1, high);           // sort right half
+    merge(arr, low, mid, high);              // combine the two sorted halves
+}
+```
+
+Raw-array version (same logic, if you're following Striver's signature):
+
+```cpp
+void merge(int arr[], int low, int mid, int high);
+void mergeSort(int arr[], int low, int high);
+```
+
+Everything inside is identical — `vector<int>&` just avoids the array-decays-to-pointer
+awkwardness and works directly with LeetCode's signatures.
+
+## Driver program
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+void merge(vector<int>& arr, int low, int mid, int high) {
+    vector<int> temp;
+    temp.reserve(high - low + 1);
+    int left = low, right = mid + 1;
+
+    while (left <= mid && right <= high) {
+        if (arr[left] <= arr[right]) temp.push_back(arr[left++]);
+        else                         temp.push_back(arr[right++]);
+    }
+    while (left  <= mid)  temp.push_back(arr[left++]);
+    while (right <= high) temp.push_back(arr[right++]);
+
+    for (int i = low; i <= high; i++) arr[i] = temp[i - low];
+}
+
+void mergeSort(vector<int>& arr, int low, int high) {
+    if (low >= high) return;
+    int mid = low + (high - low) / 2;
+    mergeSort(arr, low, mid);
+    mergeSort(arr, mid + 1, high);
+    merge(arr, low, mid, high);
+}
+
+int main() {
+    int n;
+    cout << "Enter n: ";
+    cin >> n;
+
+    vector<int> arr(n);
+    cout << "Enter array elements: " << endl;
+    for (int i = 0; i < n; i++) cin >> arr[i];
+
+    mergeSort(arr, 0, n - 1);          // 0 and n-1 because both ends are inclusive
+
+    cout << "After merge sort: " << endl;
+    for (int x : arr) cout << x << " ";
+    return 0;
+}
+```
+
+Safe for `n = 0`: the call becomes `mergeSort(arr, 0, -1)` and `low >= high` returns
+immediately.
+
+## Where merge sort shows up beyond sorting
+
+The `merge` function is a reusable tool in its own right — this is the real reason to learn it
+properly rather than just memorising the sort.
+
+- **LC 88 — Merge Sorted Array.** Literally just the merge step. Do this one next.
+- **Count Inversions** (pairs `i < j` with `arr[i] > arr[j]`). In phase 1, every time you take
+  from the *right* half, that element is smaller than **all** `mid - left + 1` remaining
+  elements of the left half — so add that count. Turns an O(n²) brute force into O(n log n).
+  This is the single most common merge-sort-based interview problem.
+- **Count Reverse Pairs** (LC 493), **Count of Smaller Numbers After Self** (LC 315) — same
+  trick, different counting condition.
+- **External sorting** — sorting data too large to fit in RAM. You can merge two sorted files
+  by streaming them with two pointers and never holding more than a couple of records in
+  memory. No in-place algorithm can do this. It's why merge sort exists in practice.
+- **Sorting linked lists** — merge sort is the *preferred* O(n log n) sort for linked lists,
+  because merging requires only pointer rewiring (O(1) extra space, no random access needed).
+  Quick sort needs random access to be efficient. See **LC 148 — Sort List** at Step 6.
+
+## Merge sort vs quick sort (preview)
+
+| | Merge Sort | Quick Sort |
+|--|--|--|
+| Worst case | **O(n log n)** guaranteed | O(n²) on bad pivots |
+| Average | O(n log n) | O(n log n), smaller constant → usually **faster in practice** |
+| Auxiliary space | O(n) | O(1) (+ O(log n) stack) |
+| Stable | **yes** | no (standard version) |
+| Splits | always exactly in half, by **position** | splits by **value** around a pivot; sizes vary |
+| Work happens | on the way **up** (merge) | on the way **down** (partition) |
+
+They're mirror images: merge sort does trivial splitting and clever combining; quick sort does
+clever splitting and trivial combining (nothing at all, in fact — once partitioned around the
+pivot, the halves need no recombination).
+
+---
+
+# Add this to the side-by-side summary table
+
+| | Merge Sort |
+|--|--|
+| Sorted region grows from | n/a — builds bottom-up from sorted sub-ranges |
+| Placed elements final? | not until their final merge |
+| How an element moves | copied into a buffer, then copied back |
+| Best case | **O(n log n)** |
+| Average | **O(n log n)** |
+| Worst | **O(n log n)** |
+| Space | **O(n)** + O(log n) stack |
+| Swaps (worst) | 0 (it copies, ~n log n writes) |
+| Stable | yes |
+| Adaptive | no (yes, with the `arr[mid] <= arr[mid+1]` check) |
+
+And add to **Pick by constraint:**
+
+- **You need a guaranteed O(n log n) with no worst-case blowup, or you need stability, or the
+  data doesn't fit in memory** → Merge Sort. It's the first sort here that's actually usable on
+  large inputs.
