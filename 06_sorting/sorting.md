@@ -600,36 +600,6 @@ int main() {
 
 ---
 
-# Side-by-side summary
-
-| | Selection Sort | Bubble Sort | Insertion Sort |
-|--|--|--|--|
-| Sorted region grows from | left | right | left |
-| Placed elements are final? | yes | yes | **no** — they still shift |
-| How an element moves | one long-distance swap | many adjacent swaps | many adjacent swaps/shifts |
-| Best case | O(n²) | O(n) *(needs `swapped` flag)* | **O(n)** *(falls out of the `break`)* |
-| Average | O(n²) | O(n²) | O(n²) |
-| Worst | O(n²) | O(n²) | O(n²) |
-| Space | O(1) | O(1) | O(1) |
-| Swaps (worst) | **n-1** | n(n-1)/2 | n(n-1)/2 |
-| Stable | no (standard version) | yes | yes |
-| Adaptive | no | only detects "fully sorted" | **yes** — O(n·k) for k-sorted data |
-
-**Pick by constraint:**
-
-- **Writes are expensive** (large structs, flash memory, network) → Selection Sort, at most
-  `n-1` swaps.
-- **Data is nearly sorted, or arrives one element at a time** → Insertion Sort. It's also the
-  fastest of the three on small arrays in practice, which is why real library sorts fall back
-  to it below ~16–32 elements.
-- **Bubble Sort** → mostly a teaching algorithm. Insertion Sort beats it on essentially every
-  metric while being just as simple.
-
-All three are O(n²) and none should be used on large inputs — reach for `std::sort` (O(n log n))
-or `std::stable_sort` when stability is needed.
-
----
-
 # Merge Sort
 
 **Core idea:** sorting a big array is hard; **merging two already-sorted arrays is easy**. So
@@ -1006,23 +976,545 @@ pivot, the halves need no recombination).
 
 ---
 
-# Add this to the side-by-side summary table
+# Quick Sort
 
-| | Merge Sort |
+**Core idea:** pick one element as the **pivot**, then rearrange the array so that everything
+smaller than the pivot sits to its left and everything larger sits to its right. The pivot is
+now in its **final sorted position** — permanently, never to move again. Recurse on the left
+part and the right part. When every element has had a turn as a pivot, the array is sorted.
+
+There is **no combine step.** That's the whole trick. Once the two sides are each sorted
+internally, the array is sorted, because the partition already guaranteed that everything left
+of the pivot belongs left of it and everything right belongs right.
+
+**The mirror image of merge sort:**
+
+| | Merge Sort | Quick Sort |
+|--|--|--|
+| Divide | trivial — cut at `mid`, no thought required | **hard** — partition around a pivot |
+| Combine | **hard** — the whole `merge` function | trivial — literally nothing |
+| Work happens | on the way **back up** the recursion | on the way **down** |
+| Splits by | **position** (always exactly half) | **value** (halves can be any size) |
+
+Merge sort splits stupidly and combines cleverly. Quick sort splits cleverly and doesn't need
+to combine at all. Both reach O(n log n), from opposite directions.
+
+## The two halves of the algorithm
+
+Same separation of concerns as merge sort — keep them apart in your head:
+
+| function | what it does | does it sort anything? |
+|--|--|--|
+| `quickSort()` | recurses on the two sides of the pivot | **no** — pure bookkeeping |
+| `partition()` | places ONE element (the pivot) in its final spot | **yes** — all the real work |
+
+Every element ends up in the right place by being a pivot exactly once.
+
+## How it works
+
+**Choose a pivot.** This version uses `arr[low]`, the first element of the range. (Simplest
+choice, and also the weakest — see the worst case below.)
+
+**Partition.** Rearrange `arr[low…high]` so that:
+
+```
+[ elements <= pivot | pivot | elements > pivot ]
+                      ^
+                      returned index p — this element is DONE forever
+```
+
+**Recurse** on `arr[low…p-1]` and `arr[p+1…high]`. Note the pivot at index `p` is excluded from
+both — it's already final, so re-examining it would be wasted work (and would break the
+"range always shrinks" guarantee, causing infinite recursion).
+
+**Base case:** `if (low >= high) return;` — a range of size 0 or 1 needs no work.
+
+### The one big difference from merge sort
+
+In merge sort, **nothing** is in its final position until the very last merge completes. In
+quick sort, the pivot is final the instant `partition` returns. The sorted region isn't a
+contiguous block growing from one side — it's a scattered set of already-placed pivots that
+gradually fills in.
+
+## The partition step in detail
+
+This is the part to understand cold. Everything else is a three-line wrapper.
+
+**The goal:** find where the pivot belongs, and get everything else onto the correct side of it,
+in a single pass, without any extra memory.
+
+**The idea:** run two pointers toward each other.
+
+- `i` walks **rightward** from `low`, looking for an element that is **bigger** than the pivot —
+  i.e. an element that's on the wrong side (it's on the left but belongs on the right).
+- `j` walks **leftward** from `high`, looking for an element that is **`<=`** the pivot — again,
+  wrong side (it's on the right but belongs on the left).
+
+When both pointers have found a misplaced element and haven't crossed yet, **swap them** — one
+exchange fixes two problems at once. Repeat until the pointers cross.
+
+**When they cross**, `j` is sitting at the boundary: the last position holding a value `<=`
+pivot. Swap the pivot (still parked at `low`) with `arr[j]`, and the pivot lands exactly on
+that boundary. Return `j`.
+
+### Why swap with `j` and not `i`
+
+At the moment the loop exits, `j < i`. The `j` scan stops only on an element that is `<=` pivot,
+so `arr[j] <= pivot` is guaranteed — safe to move to the left side. The `i` scan stops only on
+an element `> pivot`, so `arr[i] > pivot`. Swapping the pivot with `arr[i]` would put a value
+greater than the pivot *before* it. **Wrong.** It must be `j`.
+
+### Why the conditions are asymmetric — `<=` on one side, `>` on the other
+
+```cpp
+while (arr[i] <= pivot && ...) i++;   // note <=
+while (arr[j] >  pivot && ...) j--;   // note >  (strict)
+```
+
+Both pointers must be able to *step over* elements equal to the pivot, but only one side should
+*stop* on them — otherwise arrays full of duplicates behave badly. With `<=` on the `i` scan,
+`i` skips past equal elements; with strict `>` on the `j` scan, `j` stops on them. Make both
+non-strict and you get infinite loops on all-equal input; make both strict and equal elements
+pile up in a way that degrades the split.
+
+Take `[5, 5, 5, 5]` with pivot `5`: the `i` scan runs to the bounds guard, `j` stops
+immediately, they cross, and the pivot lands at `low` — the partition is lopsided but it
+**terminates**, which is the important part.
+
+### The bounds guards — `i <= high-1` and `j >= low+1`
+
+These stop the scans from running off the end of the range.
+
+- If the pivot is the **maximum** of the range, nothing is `> pivot`, so the `i` scan would run
+  forever rightward. `i <= high-1` stops it.
+- If the pivot is the **minimum**, nothing is `<= pivot` except the pivot itself, so the `j`
+  scan would run leftward past `low`. `j >= low+1` stops it.
+
+Forget either and you get out-of-bounds reads on exactly the inputs that look most innocent
+(already-sorted arrays). This is the most common quick sort bug when re-coding from memory.
+
+## Dry run — `[13, 46, 24, 52, 20, 9]`
+
+### Call 1: `quickSort(0, 5)` — pivot `13`
+
+| action | `i` | `j` | array after |
+|--|--|--|--|
+| start, pivot = `arr[0]` = `13` | 0 | 5 | `13 46 24 52 20 9` |
+| `i` scans right past `13`, stops at `46` (>13). `j` stops at `9` (not >13). Not crossed → **swap** | 1 | 5 | `13 9 24 52 20 46` |
+| `i` skips `9`, stops at `24` (>13). `j` walks left past `46,20,52,24`, stops at `9`. **Crossed** (i=2 > j=1) | 2 | 1 | `13 9 24 52 20 46` |
+| swap pivot `arr[0]` ↔ `arr[1]` | — | — | `9 13 24 52 20 46` |
+
+**Returns `p = 1`.** `13` is now permanently at index 1. Left side `[9]`, right side
+`[24,52,20,46]`.
+
+### Call 2: `quickSort(2, 5)` — pivot `24`
+
+(`quickSort(0,0)` is a base case, returns immediately.)
+
+| action | `i` | `j` | array after |
+|--|--|--|--|
+| start, pivot = `arr[2]` = `24` | 2 | 5 | `9 13 24 52 20 46` |
+| `i` stops at `52` (>24). `j` skips `46`, stops at `20`. Not crossed → **swap** | 3 | 4 | `9 13 24 20 52 46` |
+| `i` skips `20`, stops at `52`. `j` stops at `20`. **Crossed** | 4 | 3 | `9 13 24 20 52 46` |
+| swap pivot `arr[2]` ↔ `arr[3]` | — | — | `9 13 20 24 52 46` |
+
+**Returns `p = 3`.** `24` is final at index 3.
+
+### Call 3: `quickSort(4, 5)` — pivot `52`
+
+| action | `i` | `j` | array after |
+|--|--|--|--|
+| start, pivot = `arr[4]` = `52` | 4 | 5 | `9 13 20 24 52 46` |
+| `i` scans past `52` but hits the guard `i <= high-1 = 4` → stops at 5. `j` stops at `46`. `i == j`, loop exits | 5 | 5 | `9 13 20 24 52 46` |
+| swap pivot `arr[4]` ↔ `arr[5]` | — | — | `9 13 20 24 46 52` |
+
+**Returns `p = 5`.** Then `quickSort(4,4)` and `quickSort(6,5)` are both base cases.
+
+**Final: `9 13 20 24 46 52`** ✓
+
+### Recursion tree for this run
+
+```
+                 quickSort(0,5)  pivot 13 -> lands at index 1
+                /                                    \
+      quickSort(0,0)                          quickSort(2,5)  pivot 24 -> index 3
+        base case                            /                        \
+                                  quickSort(2,2)              quickSort(4,5)  pivot 52 -> index 5
+                                    base case                /               \
+                                                    quickSort(4,4)      quickSort(6,5)
+                                                      base case           base case
+```
+
+Notice this tree is **lopsided** — it leans right the whole way down. Depth 3 for only 6
+elements. Every pivot happened to be near the small end of its range, so each partition peeled
+off just one element instead of splitting in half. That's quick sort's weakness in miniature,
+and it's exactly what the worst case below is about. Merge sort's tree for the same input is
+perfectly balanced regardless of the values.
+
+## Complexity
+
+| | Time | Why |
+|--|--|--|
+| Best case | O(n log n) | pivot lands near the middle every time → range halves each level → `log n` levels × O(n) partition work per level |
+| Average case | O(n log n) | on random input the pivot is "good enough" — even a consistent 25/75 split still gives O(n log n), just with a bigger constant |
+| Worst case | **O(n²)** | pivot is the min or max every time → split is 0 and n-1 → `n` levels × O(n) work |
+| Space | **O(1) auxiliary** + O(log n) stack (average), O(n) stack (worst) | partitions in place — no `temp` buffer |
+
+### The recurrence
+
+Partitioning a range of size `n` costs O(n) — each pointer walks part of the range, together
+covering it once. So:
+
+```
+T(n) = T(size of left) + T(size of right) + O(n)
+```
+
+**Balanced:** `T(n) = 2·T(n/2) + O(n)` → the merge sort recurrence → **O(n log n)**.
+
+**Degenerate:** `T(n) = T(0) + T(n-1) + O(n)` → `n + (n-1) + (n-2) + … = n(n-1)/2` → **O(n²)**.
+
+### What actually triggers the worst case — the cruel irony
+
+With `pivot = arr[low]`, the killer input is an **already-sorted array** (or reverse-sorted).
+
+Every pivot is the minimum of its range, so every partition splits into `[]` and `[rest]`, and
+the recursion depth becomes `n` instead of `log n`. Quick sort's *worst* input is the one every
+other algorithm finds easiest — insertion sort does sorted input in O(n), merge sort in
+O(n log n) as always, and quick sort blows up to O(n²).
+
+Worse, the recursion depth `n` means **stack overflow**, not just slowness. At `n = 10⁵`
+sorted input, this implementation crashes rather than merely running slowly.
+
+### The fix — randomise the pivot
+
+One line at the top of `partition`:
+
+```cpp
+swap(arr[low], arr[low + rand() % (high - low + 1)]);
+```
+
+Pick a random element from the range and move it to `low`, then proceed exactly as before. Now
+no *specific* input is bad — an adversary can't hand you a killer array, because the pivot
+doesn't depend on the input's arrangement. The O(n²) worst case still exists mathematically
+but becomes vanishingly unlikely (probability of `k` consecutive terrible pivots decays
+exponentially).
+
+Other common strategies:
+
+- **Median-of-three** — take the median of `arr[low]`, `arr[mid]`, `arr[high]`. Cheap,
+  deterministic, and handles sorted input well. Common in real libraries.
+- **Introsort** — what `std::sort` actually does. Runs quick sort, tracks recursion depth, and
+  if it exceeds `2·log n` (meaning pivots have been bad), switches to heap sort to guarantee
+  O(n log n). Below ~16 elements it switches to insertion sort. Best of all three worlds.
+
+### Space — quick sort's main advantage
+
+**O(1) auxiliary.** No `temp` buffer, unlike merge sort's O(n). All the rearranging happens by
+swapping inside the original array. Combined with better cache locality (it works on
+contiguous ranges instead of copying between two arrays), this is why quick sort usually beats
+merge sort in wall-clock time despite the same asymptotic complexity.
+
+The recursion stack is O(log n) on average but O(n) in the worst case. You can force it to
+O(log n) always by recursing on the **smaller** side and looping on the larger:
+
+```cpp
+while (low < high) {
+    int p = partition(arr, low, high);
+    if (p - low < high - p) {           // recurse into the smaller side only
+        quickSort(arr, low, p - 1);
+        low = p + 1;                    // ...and loop on the bigger side
+    } else {
+        quickSort(arr, p + 1, high);
+        high = p - 1;
+    }
+}
+```
+
+Worth knowing exists; not worth writing while you're learning the shape.
+
+## Stability and adaptivity
+
+**Stable:** **no.** Partition swaps elements across long distances, so two equal elements can
+easily be reordered relative to each other. This is why `std::sort` (introsort) is *not*
+stable while `std::stable_sort` (merge sort based) is. Making quick sort stable requires O(n)
+extra space — at which point you may as well use merge sort.
+
+**Adaptive:** **no — worse than no.** Sorted input isn't merely un-helpful, it's the *worst*
+case for the naive pivot. Compare:
+
+| input | Insertion Sort | Merge Sort | Quick Sort (pivot = arr[low]) |
+|--|--|--|--|
+| already sorted | **O(n)** | O(n log n) | **O(n²)** ← worst case |
+| reverse sorted | O(n²) | O(n log n) | **O(n²)** ← worst case |
+| random | O(n²) | O(n log n) | O(n log n) |
+
+## Number of swaps
+
+O(n log n) on average — each level of recursion performs at most `n/2` swaps in its partitions,
+across `log n` levels. Worst case O(n²).
+
+Compared to merge sort's zero swaps and `O(n log n)` copies: quick sort's swaps operate in
+place, so the total *memory traffic* is lower even when the operation count is similar.
+
+## Handling duplicates — 3-way partitioning
+
+The version above puts elements equal to the pivot on the left side, so an array like
+`[5,5,5,5,5]` degrades toward O(n²) — every partition peels off one element. **Dutch National
+Flag** partitioning fixes this by splitting into three regions instead of two:
+
+```
+[ < pivot | == pivot | > pivot ]
+```
+
+Everything equal to the pivot is now final in one pass, so you recurse only on the strictly-
+smaller and strictly-larger parts. On input with many duplicates this turns O(n²) into O(n).
+
+**You already know this pattern from LC 75 (Sort Colors)** — sorting `0`s, `1`s and `2`s with
+three pointers *is* a 3-way partition with the pivot fixed at `1`. Same algorithm, stripped to
+its simplest case.
+
+## Pseudocode outline
+
+**partition(arr, low, high) → index:**
+- `pivot = arr[low]`, `i = low`, `j = high`
+- While `i < j`:
+  - Advance `i` right while `arr[i] <= pivot` **and** `i <= high-1`
+  - Advance `j` left while `arr[j] > pivot` **and** `j >= low+1`
+  - If `i < j`, swap `arr[i]` and `arr[j]`
+- Swap `arr[low]` and `arr[j]`
+- Return `j`
+
+**quickSort(arr, low, high):**
+- If `low >= high`, return — size 0 or 1
+- `p = partition(arr, low, high)`
+- `quickSort(arr, low, p - 1)` — left side
+- `quickSort(arr, p + 1, high)` — right side, pivot at `p` excluded from both
+
+## C++ implementation
+
+```cpp
+// Places arr[low] at its final sorted position and returns that index.
+// AFTER: everything in arr[low..p-1] is <= pivot, everything in arr[p+1..high] is > pivot.
+int partition(vector<int>& arr, int low, int high) {
+    int pivot = arr[low];
+    int i = low;
+    int j = high;
+
+    while (i < j) {
+        // scan RIGHT for an element bigger than the pivot (it's on the wrong side).
+        // i <= high-1 stops the scan running off the end when pivot is the maximum.
+        while (arr[i] <= pivot && i <= high - 1) i++;
+
+        // scan LEFT for an element <= the pivot (also on the wrong side).
+        // j >= low+1 stops the scan when pivot is the minimum.
+        while (arr[j] > pivot && j >= low + 1) j--;
+
+        // both found something misplaced and haven't crossed -> one swap fixes both
+        if (i < j) swap(arr[i], arr[j]);
+    }
+
+    // Loop exited => j has crossed below i, so arr[j] <= pivot is guaranteed.
+    // That makes index j the boundary, i.e. the pivot's true home. (NOT arr[i] —
+    // arr[i] > pivot, so swapping there would put a bigger value before the pivot.)
+    swap(arr[low], arr[j]);
+    return j;
+}
+
+// Sorts arr[low..high]. Both ends INCLUSIVE.
+void quickSort(vector<int>& arr, int low, int high) {
+    if (low >= high) return;                 // base case: size 0 or 1
+
+    int p = partition(arr, low, high);       // pivot is now FINAL at index p
+
+    quickSort(arr, low, p - 1);              // sort everything left of the pivot
+    quickSort(arr, p + 1, high);             // sort everything right of it
+    // no combine step — the partition already guaranteed the ordering between sides
+}
+```
+
+Raw-array version (Striver's signature) — identical body, just `int arr[]` instead of
+`vector<int>&`:
+
+```cpp
+int partition(int arr[], int low, int high);
+void quickSort(int arr[], int low, int high);
+```
+
+### Randomised-pivot version (use this one for anything real)
+
+```cpp
+int partition(vector<int>& arr, int low, int high) {
+    // Move a RANDOM element of the range to low, then partition as usual.
+    // Kills the O(n^2) worst case on sorted / reverse-sorted input.
+    swap(arr[low], arr[low + rand() % (high - low + 1)]);
+
+    int pivot = arr[low];
+    int i = low, j = high;
+    while (i < j) {
+        while (arr[i] <= pivot && i <= high - 1) i++;
+        while (arr[j] >  pivot && j >= low + 1)  j--;
+        if (i < j) swap(arr[i], arr[j]);
+    }
+    swap(arr[low], arr[j]);
+    return j;
+}
+```
+
+### The other common form — Lomuto partition
+
+Different partition scheme, same algorithm. Pivot is the **last** element, one pointer tracks
+the boundary:
+
+```cpp
+int partitionLomuto(vector<int>& arr, int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;                       // boundary of the "<= pivot" region
+    for (int j = low; j < high; j++) {
+        if (arr[j] <= pivot) {
+            i++;
+            swap(arr[i], arr[j]);
+        }
+    }
+    swap(arr[i + 1], arr[high]);           // drop the pivot just past the boundary
+    return i + 1;
+}
+```
+
+| | Hoare-style (above, Striver's) | Lomuto |
+|--|--|--|
+| Pivot | first element | last element |
+| Pointers | two, moving toward each other | one scanning pointer + one boundary |
+| Swaps | ~3× fewer | more |
+| Reads more easily | no | **yes** |
+| Handles duplicates | better | degrades badly on all-equal input |
+
+Lomuto is easier to remember and is what CLRS teaches. The two-pointer form is faster and is
+what Striver uses. Know both exist; write whichever you can reproduce correctly under pressure.
+
+## Driver program
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+int partition(vector<int>& arr, int low, int high) {
+    int pivot = arr[low];
+    int i = low, j = high;
+    while (i < j) {
+        while (arr[i] <= pivot && i <= high - 1) i++;
+        while (arr[j] >  pivot && j >= low + 1)  j--;
+        if (i < j) swap(arr[i], arr[j]);
+    }
+    swap(arr[low], arr[j]);
+    return j;
+}
+
+void quickSort(vector<int>& arr, int low, int high) {
+    if (low >= high) return;
+    int p = partition(arr, low, high);
+    quickSort(arr, low, p - 1);
+    quickSort(arr, p + 1, high);
+}
+
+int main() {
+    int n;
+    cout << "Enter n: ";
+    cin >> n;
+
+    vector<int> arr(n);
+    cout << "Enter array elements: " << endl;
+    for (int i = 0; i < n; i++) cin >> arr[i];
+
+    quickSort(arr, 0, n - 1);          // 0 and n-1 because both ends are inclusive
+
+    cout << "After quick sort: " << endl;
+    for (int x : arr) cout << x << " ";
+    return 0;
+}
+```
+
+Safe for `n = 0`: the call becomes `quickSort(arr, 0, -1)` and `low >= high` returns
+immediately.
+
+> Note on `int arr[n]`: that's a **VLA** (variable-length array), a C feature `g++` allows as an
+> extension but which isn't standard C++ and is rejected by MSVC and some judges. Use
+> `vector<int> arr(n)` — and `arr.data()` if a function signature demands a raw `int*`.
+
+## Where quick sort shows up beyond sorting
+
+The `partition` function is the reusable piece — more so than quick sort itself.
+
+- **Quickselect — find the k-th smallest/largest in O(n) average.** Partition once. If the
+  pivot lands at index `k`, you're done. Otherwise recurse into **only the side containing
+  `k`** — you never sort the other half. Since you halve the work each time instead of doing
+  both halves, `n + n/2 + n/4 + … = 2n` → **O(n) average**.
+  This is **LC 215 — Kth Largest Element in an Array**, one of the most-asked interview
+  questions. (A heap solves it in O(n log k); quickselect is the O(n) answer.)
+- **LC 973 — K Closest Points to Origin.** Quickselect on distance.
+- **LC 75 — Sort Colors.** The Dutch National Flag algorithm is a 3-way partition. Do this one
+  at Step 2 and you've already met the idea.
+- **LC 912 — Sort an Array.** Where you submit your own implementation. Use the randomised
+  pivot — the judge's test cases include sorted input specifically to break naive quick sort.
+- **`std::nth_element`** — the STL's quickselect. O(n) average, rearranges so the n-th element
+  is in its sorted position. Worth knowing it exists.
+
+## Merge sort vs quick sort — the decision
+
+| | Merge Sort | Quick Sort |
+|--|--|--|
+| Worst case | **O(n log n)** guaranteed | O(n²) (mitigated by random pivot) |
+| Average | O(n log n) | O(n log n), **smaller constant** |
+| Auxiliary space | O(n) | **O(1)** |
+| Stable | **yes** | no |
+| Cache behaviour | poorer (copies between arrays) | **better** (in-place, contiguous) |
+| Sorted input | O(n log n) | **O(n²)** with naive pivot |
+| Linked lists | **ideal** — pointer rewiring, O(1) extra | poor — needs random access |
+| External / on-disk data | **works** — streams sequentially | doesn't |
+
+**In practice:** quick sort (as introsort) is the default for arrays — it's what `std::sort`
+uses. Merge sort is the choice when you need stability (`std::stable_sort`), when sorting
+linked lists, or when the data doesn't fit in memory.
+
+---
+
+# Side-by-side summary — all five
+
+| | Selection | Bubble | Insertion | Merge | Quick |
+|--|--|--|--|--|--|
+| Sorted region grows from | left | right | left | n/a — bottom-up from sub-ranges | n/a — pivots land scattered |
+| Placed elements final? | yes | yes | **no** — they still shift | not until their final merge | **yes** — pivot never moves again |
+| How an element moves | one long-distance swap | many adjacent swaps | many adjacent swaps/shifts | copied to a buffer and back | long-distance swaps across the pivot |
+| Best case | O(n²) | O(n) *(needs flag)* | **O(n)** | O(n log n) | O(n log n) |
+| Average | O(n²) | O(n²) | O(n²) | **O(n log n)** | **O(n log n)** *(fastest constant)* |
+| Worst | O(n²) | O(n²) | O(n²) | **O(n log n)** | O(n²) |
+| Auxiliary space | O(1) | O(1) | O(1) | **O(n)** | **O(1)** + O(log n) stack |
+| Swaps (worst) | **n-1** | n(n-1)/2 | n(n-1)/2 | 0 (copies, ~n log n writes) | O(n²) |
+| Stable | no | yes | yes | **yes** | no |
+| Adaptive | no | detects "fully sorted" only | **yes** — O(n·k) | no (yes w/ `arr[mid]<=arr[mid+1]` check) | no — sorted input is the **worst** case |
+| Divide & conquer | no | no | no | **yes** | **yes** |
+
+## Pick by constraint
+
+- **Writes are expensive** (large structs, flash memory, network) → **Selection Sort**, at most
+  `n-1` swaps.
+- **Data is nearly sorted, or arrives one element at a time** → **Insertion Sort**. Also the
+  fastest of the O(n²) three on small arrays, which is why real library sorts fall back to it
+  below ~16–32 elements.
+- **Bubble Sort** → mostly a teaching algorithm. Insertion Sort beats it on essentially every
+  metric while being just as simple.
+- **You need guaranteed O(n log n) with no worst-case blowup, or stability, or the data doesn't
+  fit in memory, or you're sorting a linked list** → **Merge Sort**.
+- **General-purpose array sorting, memory is tight, you want raw speed** → **Quick Sort** with a
+  randomised pivot. This is what `std::sort` uses (as introsort).
+- **In real code** → `std::sort` (O(n log n), introsort) or `std::stable_sort` when stability
+  matters. Hand-written sorts are for understanding, not for production.
+
+## The one-line summary of each
+
+| | |
 |--|--|
-| Sorted region grows from | n/a — builds bottom-up from sorted sub-ranges |
-| Placed elements final? | not until their final merge |
-| How an element moves | copied into a buffer, then copied back |
-| Best case | **O(n log n)** |
-| Average | **O(n log n)** |
-| Worst | **O(n log n)** |
-| Space | **O(n)** + O(log n) stack |
-| Swaps (worst) | 0 (it copies, ~n log n writes) |
-| Stable | yes |
-| Adaptive | no (yes, with the `arr[mid] <= arr[mid+1]` check) |
-
-And add to **Pick by constraint:**
-
-- **You need a guaranteed O(n log n) with no worst-case blowup, or you need stability, or the
-  data doesn't fit in memory** → Merge Sort. It's the first sort here that's actually usable on
-  large inputs.
+| Selection | repeatedly **select** the minimum and swap it to the front |
+| Bubble | repeatedly **bubble** the maximum to the back via adjacent swaps |
+| Insertion | repeatedly **insert** the next element into the sorted prefix |
+| Merge | **split** blindly in half, **merge** the sorted halves cleverly |
+| Quick | **partition** cleverly around a pivot, then nothing left to combine |
