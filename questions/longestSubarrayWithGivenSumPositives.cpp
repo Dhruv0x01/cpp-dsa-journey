@@ -21,6 +21,9 @@ int longestSubarray(vector<int>& arr, int K){
 }
 */
 
+/*
+// Better solution
+// (Optimal also if array contains negatives, zeroes and positives)
 int longestSubarray(vector<int>& arr, long long k){
     int n = arr.size();
 
@@ -87,7 +90,36 @@ int longestSubarray(vector<int>& arr, long long k){
         
     }
     return maxLen;
+}
+*/
 
+// Optimal Solution
+// 2 pointer and Greedy approach
+// Only when array has zeroes and positives only
+int longestSubarray(vector<int>& arr, long long k){
+    int n = arr.size();
+    int maxLen = 0, left = 0, right = 0;
+    long long sum = arr[0];
+
+    while(right < n){
+        
+        while(sum > k && left<=right){
+            sum -= arr[left];
+            left++;
+        }
+
+        if(sum == k){
+            maxLen = max(maxLen, right-left+1);
+        }
+
+        right++;
+        if(right<n){
+            sum += arr[right];
+        }
+
+    }
+
+    return maxLen;
 }
 
 
@@ -112,7 +144,7 @@ int main(){
 
     int result = longestSubarray(arr, k);
 
-    cout << result;
+    cout << result << endl;
 
     return 0;
 }
